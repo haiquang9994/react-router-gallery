@@ -42,30 +42,47 @@ const Wrap = ({ children }: { children?: React.ReactNode }) => {
     );
 };
 
+interface LoaderProps {
+    children: JSX.Element;
+    loading?: boolean;
+}
+
+let Loader = ({ children, loading = false }: LoaderProps) => {
+    if (loading) {
+        return <div className="gallery-loader">Loading...</div>;
+    }
+    return children;
+};
+
 const Gallery = ({
     children,
     title = undefined,
     onCancel = undefined,
     style = undefined,
+    loading = false,
 }: {
-    children?: React.ReactNode;
+    children: JSX.Element;
     title?: string;
     onCancel?: () => void;
     style?: React.CSSProperties;
+    loading?: boolean;
 }) => {
     const navigate = useNavigate();
     const online = React.useRef(true);
     const handleCancel = () => {
         if (online.current) {
             online.current = false;
-            navigate(-1);
-            typeof onCancel === "function" && onCancel();
+            if (typeof onCancel === "function") {
+                onCancel();
+            } else {
+                navigate(-1);
+            }
         }
     };
     const { gallery } = React.useContext(GalleryContext);
 
     if (!gallery) {
-        return <>{children}</>;
+        return <Loader loading={loading} children={children} />;
     }
 
     return (
@@ -73,10 +90,16 @@ const Gallery = ({
             <div className="gallery-fog" onClick={handleCancel} />
             <div className="gallery-content" style={style}>
                 {title && <div className="gallery-header">{title}</div>}
-                <div className="gallery-body">{children}</div>
+                <div className="gallery-body">
+                    <Loader loading={loading} children={children} />
+                </div>
             </div>
         </>
     );
+};
+
+Gallery.setLoader = (loader: (props: LoaderProps) => JSX.Element) => {
+    Loader = loader;
 };
 
 const callbacks: { [key: string]: (args: any) => any } = {};
@@ -97,12 +120,21 @@ Gallery.triggerCallback = (name: string, args: any = undefined) => {
 
 const GalleryContext = React.createContext<{ location: Location; gallery: boolean }>(null!);
 
-const RouterContext = React.createContext<{ history: BrowserHistory }>(null!);
+const RouterContext = React.createContext<{
+    history: BrowserHistory;
+    items: Location[];
+    setItems: (items: Location[]) => void;
+}>(null!);
+
+export const useGalleryItems = () => {
+    const { items } = React.useContext(RouterContext);
+
+    return items;
+};
 
 export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
-    const [items, setItems] = React.useState<Location[]>([]);
     const current = useLocation();
-    const { history } = React.useContext(RouterContext);
+    const { history, items, setItems } = React.useContext(RouterContext);
 
     const push = (item: Location) => {
         const state = item.state as StateWithGallery;
@@ -211,11 +243,14 @@ export const GalleryRouter = ({ history, children }: { history: BrowserHistory; 
         action: history.action,
         location: history.location,
     });
+    const [items, ___] = React.useState<Location[]>([]);
+
+    const setItems = (items: Location[]) => ___(items);
 
     React.useLayoutEffect(() => history.listen(setValue), [history]);
 
     return (
-        <RouterContext.Provider value={{ history }}>
+        <RouterContext.Provider value={{ history, items, setItems }}>
             <Router navigator={history} location={value.location} navigationType={value.action} children={children} />
         </RouterContext.Provider>
     );
