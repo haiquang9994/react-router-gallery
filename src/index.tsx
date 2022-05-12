@@ -1,4 +1,13 @@
-import React from "react";
+import React, {
+    createContext,
+    CSSProperties,
+    MutableRefObject,
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react";
 import { BrowserHistory } from "history";
 import { Route, Routes, Router, Location, useLocation, useNavigate } from "react-router-dom";
 
@@ -16,11 +25,11 @@ declare interface StateWithGallery {
     gallery?: boolean;
 }
 
-const Wrap = ({ children }: { children?: React.ReactNode }) => {
-    const ref = React.useRef() as React.MutableRefObject<HTMLImageElement>;
-    const { location, gallery } = React.useContext(GalleryContext);
+const Wrap = ({ children }: { children?: JSX.Element }) => {
+    const ref = useRef() as MutableRefObject<HTMLImageElement>;
+    const { location, gallery } = useContext(GalleryContext);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!gallery) {
             return;
         }
@@ -64,11 +73,11 @@ const Gallery = ({
     children: JSX.Element;
     title?: string;
     onCancel?: () => void;
-    style?: React.CSSProperties;
+    style?: CSSProperties;
     loading?: boolean;
 }) => {
     const navigate = useNavigate();
-    const online = React.useRef(true);
+    const online = useRef(true);
     const handleCancel = () => {
         if (online.current) {
             online.current = false;
@@ -79,7 +88,7 @@ const Gallery = ({
             }
         }
     };
-    const { gallery } = React.useContext(GalleryContext);
+    const { gallery } = useContext(GalleryContext);
 
     if (!gallery) {
         return <Loader loading={loading} children={children} />;
@@ -105,7 +114,7 @@ Gallery.setLoader = (loader: (props: LoaderProps) => JSX.Element) => {
 const callbacks: { [key: string]: (args: any) => any } = {};
 
 Gallery.useCallback = (name: string, cb: (args: any) => any, deps = undefined) => {
-    React.useEffect(() => {
+    useEffect(() => {
         callbacks[name] = cb;
         return () => {
             delete callbacks[name];
@@ -118,23 +127,23 @@ Gallery.triggerCallback = (name: string, args: any = undefined) => {
     typeof cb === "function" && cb(args);
 };
 
-const GalleryContext = React.createContext<{ location: Location; gallery: boolean }>(null!);
+const GalleryContext = createContext<{ location: Location; gallery: boolean }>(null!);
 
-const RouterContext = React.createContext<{
+const RouterContext = createContext<{
     history: BrowserHistory;
     items: Location[];
     setItems: (items: Location[]) => void;
 }>(null!);
 
 export const useGalleryItems = () => {
-    const { items } = React.useContext(RouterContext);
+    const { items } = useContext(RouterContext);
 
     return items;
 };
 
 export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     const current = useLocation();
-    const { history, items, setItems } = React.useContext(RouterContext);
+    const { history, items, setItems } = useContext(RouterContext);
 
     const push = (item: Location) => {
         const state = item.state as StateWithGallery;
@@ -166,7 +175,7 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
         setItems([item]);
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         const unlisten = history.listen(({ action, location }) => {
             if (action === "POP") {
                 const state = current.state as StateWithGallery;
@@ -201,7 +210,7 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
         return unlisten;
     }, [items]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         items.length === 0 && replaceOne(current);
     }, []);
 
@@ -238,16 +247,16 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     );
 };
 
-export const GalleryRouter = ({ history, children }: { history: BrowserHistory; children: React.ReactNode }) => {
-    const [value, setValue] = React.useState({
+export const GalleryRouter = ({ history, children }: { history: BrowserHistory; children: JSX.Element }) => {
+    const [value, setValue] = useState({
         action: history.action,
         location: history.location,
     });
-    const [items, ___] = React.useState<Location[]>([]);
+    const [items, ___] = useState<Location[]>([]);
 
     const setItems = (items: Location[]) => ___(items);
 
-    React.useLayoutEffect(() => history.listen(setValue), [history]);
+    useLayoutEffect(() => history.listen(setValue), [history]);
 
     return (
         <RouterContext.Provider value={{ history, items, setItems }}>
