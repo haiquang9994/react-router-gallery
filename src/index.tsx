@@ -141,6 +141,12 @@ export const useGalleryItems = () => {
     return items;
 };
 
+export const useGallerySetItems = () => {
+    const { setItems } = useContext(RouterContext);
+
+    return setItems;
+};
+
 export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     const current = useLocation();
     const { history, items, setItems } = useContext(RouterContext);
