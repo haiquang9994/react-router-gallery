@@ -69,12 +69,14 @@ const Gallery = ({
     onCancel = undefined,
     style = undefined,
     loading = false,
+    showNormalTitle = false,
 }: {
     children: JSX.Element;
     title?: string;
     onCancel?: () => void;
     style?: CSSProperties;
     loading?: boolean;
+    showNormalTitle?: boolean;
 }) => {
     const navigate = useNavigate();
     const online = useRef(true);
@@ -91,7 +93,12 @@ const Gallery = ({
     const { gallery } = useContext(GalleryContext);
 
     if (!gallery) {
-        return <Loader loading={loading} children={children} />;
+        return (
+            <div className="gallery-content">
+                {showNormalTitle && title && <div className="gallery-header">{title}</div>}
+                <Loader loading={loading} children={children} />
+            </div>
+        );
     }
 
     return (
