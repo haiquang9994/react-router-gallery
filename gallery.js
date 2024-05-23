@@ -1,32 +1,18 @@
+import { BrowserHistory } from "history";
 import React, {
-    createContext,
     CSSProperties,
     MutableRefObject,
+    createContext,
     useContext,
     useEffect,
     useLayoutEffect,
     useRef,
     useState,
 } from "react";
-import { BrowserHistory } from "history";
-import { Route, Routes, Router, Location, useLocation, useNavigate } from "react-router-dom";
+import { Location, Route, Router, Routes, useLocation, useNavigate } from "react-router-dom";
 
-export declare interface Element {
-    ({ location }: { location: Location }): JSX.Element;
-}
-
-export declare interface GalleryRoute {
-    name: string;
-    path: string;
-    element: Element;
-}
-
-declare interface StateWithGallery {
-    gallery?: boolean;
-}
-
-const Wrap = ({ children }: { children?: JSX.Element }) => {
-    const ref = useRef() as MutableRefObject<HTMLImageElement>;
+const Wrap = ({ children }) => {
+    const ref = useRef();
     const { location, gallery } = useContext(GalleryContext);
 
     useEffect(() => {
@@ -51,12 +37,7 @@ const Wrap = ({ children }: { children?: JSX.Element }) => {
     );
 };
 
-interface LoaderProps {
-    children: JSX.Element;
-    loading?: boolean;
-}
-
-let Loader = ({ children, loading = false }: LoaderProps) => {
+let Loader = ({ children, loading = false }) => {
     if (loading) {
         return <div className="gallery-loader">Loading...</div>;
     }
@@ -70,13 +51,6 @@ const Gallery = ({
     style = undefined,
     loading = false,
     showNormalTitle = false,
-}: {
-    children: JSX.Element;
-    title?: string;
-    onCancel?: () => void;
-    style?: CSSProperties;
-    loading?: boolean;
-    showNormalTitle?: boolean;
 }) => {
     const navigate = useNavigate();
     const online = useRef(true);
@@ -114,13 +88,13 @@ const Gallery = ({
     );
 };
 
-Gallery.setLoader = (loader: (props: LoaderProps) => JSX.Element) => {
+Gallery.setLoader = (loader) => {
     Loader = loader;
 };
 
-const callbacks: { [key: string]: (args: any) => any } = {};
+const callbacks = {};
 
-Gallery.useCallback = (name: string, cb: (args: any) => any, deps = undefined) => {
+Gallery.useCallback = (name, cb, deps = undefined) => {
     useEffect(() => {
         callbacks[name] = cb;
         return () => {
@@ -129,18 +103,14 @@ Gallery.useCallback = (name: string, cb: (args: any) => any, deps = undefined) =
     }, deps);
 };
 
-Gallery.triggerCallback = (name: string, args: any = undefined) => {
+Gallery.triggerCallback = (name, args = undefined) => {
     const cb = callbacks[name];
     typeof cb === "function" && cb(args);
 };
 
-const GalleryContext = createContext<{ location: Location; gallery: boolean }>(null!);
+const GalleryContext = createContext({ location: undefined, gallery: false });
 
-const RouterContext = createContext<{
-    history: BrowserHistory;
-    items: Location[];
-    setItems: (items: Location[]) => void;
-}>(null!);
+const RouterContext = createContext({ history: undefined, items: [], setItems: undefined });
 
 export const useGalleryItems = () => {
     const { items } = useContext(RouterContext);
@@ -154,18 +124,18 @@ export const useGallerySetItems = () => {
     return setItems;
 };
 
-export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
+export const GalleryRoutes = ({ routes }) => {
     const current = useLocation();
     const { history, items, setItems } = useContext(RouterContext);
-    const list = useRef<string[]>([]);
+    const list = useRef([]);
 
-    const push = (item: Location) => {
-        const state = item.state as StateWithGallery;
+    const push = (item) => {
+        const state = item.state;
         if (!items.find((l) => l.key === item.key)) {
             state?.gallery ? setItems([...items, item]) : replaceOne(item);
         }
     };
-    const pop = (item: Location) => {
+    const pop = (item) => {
         if (items.length > 1) {
             const newItems = [...items];
             newItems.pop();
@@ -174,7 +144,7 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
             replaceOne(item);
         }
     };
-    const replace = (item: Location) => {
+    const replace = (item) => {
         if (items.length > 1) {
             const newItems = [...items];
             newItems.pop();
@@ -183,15 +153,14 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
             replaceOne(item);
         }
     };
-    const replaceOne = (item: Location) => {
-        const state = item.state as StateWithGallery;
+    const replaceOne = (item) => {
+        const state = item.state;
         state?.gallery && delete state.gallery;
         setItems([item]);
     };
 
     useEffect(() => {
-        const state = current.state as StateWithGallery;
-        if (state?.gallery) {
+        if (current.state?.gallery) {
             list.current.push(current.pathname);
         }
     }, [current]);
@@ -199,14 +168,14 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     useEffect(() => {
         const unlisten = history.listen(({ action, location }) => {
             if (action === "POP") {
-                const state = current.state as StateWithGallery;
+                const state = current.state;
                 if (state?.gallery) {
                     const content = document.querySelector(`#_${current.key}`);
                     content && content.classList
                         ? (content.classList.remove("__active"), setTimeout(() => pop(location), 300))
                         : pop(location);
                 } else {
-                    if (list.current.includes(location.pathname)) {
+                    if (list.current?.includes(location.pathname)) {
                         list.current = list.current.filter((p) => p != location.pathname);
                         push(location);
                     } else {
@@ -218,9 +187,9 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
                 push(location);
             } else if (action === "REPLACE") {
                 list.current = [];
-                const locationState = location.state as StateWithGallery;
+                const locationState = location.state;
                 if (locationState?.gallery) {
-                    const state = current.state as StateWithGallery;
+                    const state = current.state;
                     if (state?.gallery) {
                         const content = document.querySelector(`#_${current.key}`);
                         content && content.classList
@@ -245,7 +214,7 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     return (
         <div className="gallery-list">
             {items.map((location) => {
-                const state = location.state as StateWithGallery;
+                const state = location.state;
                 const gallery = !!state?.gallery;
                 return (
                     <Routes key={location.key} location={location}>
@@ -275,14 +244,14 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     );
 };
 
-export const GalleryRouter = ({ history, children }: { history: BrowserHistory; children: JSX.Element }) => {
+export const GalleryRouter = ({ history, children }) => {
     const [value, setValue] = useState({
         action: history.action,
         location: history.location,
     });
-    const [items, ___] = useState<Location[]>([]);
+    const [items, ___] = useState([]);
 
-    const setItems = (items: Location[]) => ___(items);
+    const setItems = (items) => ___(items);
 
     useLayoutEffect(() => history.listen(setValue), [history]);
 
