@@ -157,6 +157,7 @@ export const useGallerySetItems = () => {
 export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     const current = useLocation();
     const { history, items, setItems } = useContext(RouterContext);
+    const list = useRef<string[]>([]);
 
     const push = (item: Location) => {
         const state = item.state as StateWithGallery;
@@ -189,6 +190,13 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
     };
 
     useEffect(() => {
+        const state = current.state as StateWithGallery;
+        if (state?.gallery) {
+            list.current.push(current.pathname);
+        }
+    }, [current]);
+
+    useEffect(() => {
         const unlisten = history.listen(({ action, location }) => {
             if (action === "POP") {
                 const state = current.state as StateWithGallery;
@@ -198,11 +206,19 @@ export const GalleryRoutes = ({ routes }: { routes: GalleryRoute[] }) => {
                         ? (content.classList.remove("__active"), setTimeout(() => pop(location), 300))
                         : pop(location);
                 } else {
+                    if (list.current.includes(location.pathname)) {
+                        list.current = list.current.filter((p) => p != location.pathname);
+                        push(location);
+                    } else {
+                        replaceOne(location);
+                    }
                     replaceOne(location);
                 }
             } else if (action === "PUSH") {
+                list.current = [];
                 push(location);
             } else if (action === "REPLACE") {
+                list.current = [];
                 const locationState = location.state as StateWithGallery;
                 if (locationState?.gallery) {
                     const state = current.state as StateWithGallery;
